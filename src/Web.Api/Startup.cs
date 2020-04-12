@@ -135,17 +135,34 @@ namespace Web.Api
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo() { Title = "AspNetCoreApiStarter", Version = "v1" });
-                // Swagger 2.+ support
-                var openApiSecurityScheme = new OpenApiSecurityScheme()
+                // Swagger 5.+ support
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    In = ParameterLocation.Header,
                     Description = "Please insert JWT with Bearer into field",
                     Name = "Authorization",
-                    Type = SecuritySchemeType.ApiKey
-                };
-                c.AddSecurityDefinition("Bearer", openApiSecurityScheme);
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            },
+                            Scheme = "oauth2",
+                            Name = "Bearer",
+                            In = ParameterLocation.Header,
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement{{ openApiSecurityScheme , new string[] { } } });
+                        },
+                        new string[] { }
+                    }
+                });
+
             });
 
             // Now register our services with Autofac container.
