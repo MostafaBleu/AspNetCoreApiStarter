@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -15,13 +14,12 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using NLog;
-using Swashbuckle.AspNetCore.Swagger;
 using Web.Api.Core;
 using Web.Api.Extensions;
 using Web.Api.Infrastructure;
@@ -130,28 +128,24 @@ namespace Web.Api
 
             identityBuilder = new IdentityBuilder(identityBuilder.UserType, typeof(IdentityRole), identityBuilder.Services);
             identityBuilder.AddEntityFrameworkStores<AppIdentityDbContext>().AddDefaultTokenProviders();
-
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1).AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Startup>());
-
+            services.AddControllers().AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Startup>());
             services.AddAutoMapper();
 
             // Register the Swagger generator, defining 1 or more Swagger documents
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info { Title = "AspNetCoreApiStarter", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo() { Title = "AspNetCoreApiStarter", Version = "v1" });
                 // Swagger 2.+ support
-                c.AddSecurityDefinition("Bearer", new ApiKeyScheme
+                var openApiSecurityScheme = new OpenApiSecurityScheme()
                 {
-                    In = "header",
+                    In = ParameterLocation.Header,
                     Description = "Please insert JWT with Bearer into field",
                     Name = "Authorization",
-                    Type = "apiKey"
-                });
+                    Type = SecuritySchemeType.ApiKey
+                };
+                c.AddSecurityDefinition("Bearer", openApiSecurityScheme);
 
-                c.AddSecurityRequirement(new Dictionary<string, IEnumerable<string>>
-                {
-                    { "Bearer", new string[] { } }
-                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement{{ openApiSecurityScheme , new string[] { } } });
             });
 
             // Now register our services with Autofac container.
@@ -170,7 +164,7 @@ namespace Web.Api
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseExceptionHandler(
                 builder =>
@@ -200,7 +194,12 @@ namespace Web.Api
             // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
             app.UseAuthentication();
-            app.UseMvc();
+            app.UseRouting();
+            app.UseAuthorization();
+            app.UseEndpoints(endpoints => {
+                //endpoints.MapHealthChecks("/health");
+                endpoints.MapControllers();
+            });
         }
     }
 }
